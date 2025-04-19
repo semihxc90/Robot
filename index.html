@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>VR Tetris - Quest 1</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.controls.min.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <a-scene vr-mode-ui="enabled: true" embedded>
+      <!-- Kamera ve kontrol -->
+      <a-entity id="cameraRig" position="0 1.6 5">
+        <a-camera wasd-controls="enabled: false"></a-camera>
+        <a-entity laser-controls="hand: right" id="rightHand"></a-entity>
+      </a-entity>
+
+      <!-- Tetris tahtasý arkasý -->
+      <a-box position="0 10 -3" width="10" height="20" depth="0.2" color="#222"></a-box>
+
+      <!-- Skor -->
+      <a-entity id="scoreText"
+                text="value: Skor: 0; align: center; color: white"
+                position="0 20 -2.5">
+      </a-entity>
+
+      <!-- Arka plan -->
+      <a-sky color="#111"></a-sky>
+    </a-scene>
+
+    <script>
+      const scene = document.querySelector('a-scene');
+      const scoreText = document.getElementById('scoreText');
+      let score = 0;
+      const blockSize = 1;
+      const gridWidth = 10;
+      const gridHeight = 20;
+      const grid = [];
+
+      for (let y = 0; y < gridHeight; y++) {
+        grid[y] = Array(gridWidth).fill(null);
+      }
+
+      function createBlock() {
+        const block = document.createElement('a-box');
+        block.setAttribute('depth', 0.2);
+        block.setAttribute('height', blockSize);
+        block.setAttribute('width', blockSize);
+        block.setAttribute('color', '#4CC3D9');
+        block.object3D.position.set(0, 19, -2.9);
+        block.setAttribute('class', 'falling');
+        scene.appendChild(block);
+        return block;
+      }
+
+      let currentBlock = createBlock();
+
+      function gameLoop() {
+        if (!currentBlock) return;
+
+        const pos = currentBlock.object3D.position;
+        const nextY = pos.y - 1;
+
+        if (nextY < 0 || grid[Math.floor(nextY)]?.[Math.floor(pos.x + 5)]) {
+          const y = Math.floor(pos.y);
+          const x = Math.floor(pos.x + 5);
+          if (y >= gridHeight || x < 0 || x >= gridWidth) {
+            alert("Oyun Bitti! Skor: " + score);
+            location.reload();
+            return;
+          }
+          grid[y][x] = currentBlock;
+          currentBlock.classList.remove('falling');
+          checkFullRows();
+          currentBlock = createBlock();
+        } else {
+          pos.y = nextY;
+        }
+
+        setTimeout(gameLoop, 500);
+      }
+
+      function checkFullRows() {
+        for (let y = 0; y < gridHeight; y++) {
+          if (grid[y].every(cell => cell !== null)) {
+            grid[y].forEach(cell => scene.removeChild(cell));
+            grid[y] = Array(gridWidth).fill(null);
+            for (let ty = y + 1; ty < gridHeight; ty++) {
+              for (let x = 0; x < gridWidth; x++) {
+                const block = grid[ty][x];
+                if (block) {
+                  block.object3D.position.y -= 1;
+                  grid[ty - 1][x] = block;
+                  grid[ty][x] = null;
+                }
+              }
+            }
+            score += 100;
+            scoreText.setAttribute('text', 'value', `Skor: ${score}`);
+          }
+        }
+      }
+
+      // VR kumanda kontrolleri (sadece sað el joystick)
+      let rightGamepad;
+      const checkGamepad = () => {
+        const gamepads = navigator.getGamepads();
+        for (let gp of gamepads) {
+          if (gp && gp.hand === 'right') {
+            rightGamepad = gp;
+          }
+        }
+      };
+
+      setInterval(() => {
+        checkGamepad();
+        if (!rightGamepad || !currentBlock) return;
+
+        const axes = rightGamepad.axes;
+        const pressed = rightGamepad.buttons.map(b => b.pressed);
+        const pos = currentBlock.object3D.position;
+
+        // Joystick sol/sað
+        if (axes[2] < -0.5 && pos.x > -4.5) pos.x -= 1;
+        else if (axes[2] > 0.5 && pos.x < 4.5) pos.x += 1;
+
+        // Joystick aþaðý
+        if (axes[3] > 0.5) pos.y -= 1;
+
+        // A tuþuna basýnca döndür (örnek)
+        if (pressed[0]) {
+          currentBlock.object3D.rotation.y += Math.PI / 2;
+        }
+      }, 300);
+
+      gameLoop();
+    </script>
+  </body>
+</html>
