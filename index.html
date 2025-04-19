@@ -1,0 +1,163 @@
+﻿[12:53, 19.04.2025] Semih: <!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Stereoskopik Robot AR</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.0.1/aframe/build/aframe-ar.min.js"></script>
+  </head>
+  <body style="margin: 0; overflow: hidden;">
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: true"
+      arjs="sourceType: webcam; debugUIEnabled: false;">
+
+      <a-marker preset="hiro">
+        <a-entity 
+          gltf-model="robot.glb"
+          scale="0.5 0.5 0.5"
+          position="0 0 0"
+          animation-mixer>
+        </a-entity>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
+[13:18, 19.04.2025] Semih: <!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>VR Tetris</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <a-scene>
+      <!-- Kamera ve kullanıcı konumu -->
+      <a-entity id="cameraRig" position="0 1.6 5">
+        <a-camera></a-camera>
+      </a-entity>
+
+      <!-- Tetris alanı arkası -->
+      <a-box position="0 10 -3" width="10" height="20" depth="0.2" color="#222"></a-box>
+
+      <!-- Skor tabelası -->
+      <a-entity id="scoreText"
+                text="value: Skor: 0; align: center; color: white"
+                position="0 20 -2.5">
+      </a-entity>
+
+      <!-- Sky -->
+      <a-sky color="#111"></a-sky>
+    </a-scene>
+
+    <script>
+      const scene = document.querySelector('a-scene');
+      const scoreText = document.getElementById('scoreText');
+      let score = 0;
+
+      const blockSize = 1;
+      const gridWidth = 10;
+      const gridHeight = 20;
+      const grid = [];
+
+      // Grid dizisini doldur
+      for (let y = 0; y < gridHeight; y++) {
+        grid[y] = Array(gridWidth).fill(null);
+      }
+
+      // Yeni blok oluştur
+      function createBlock() {
+        const block = document.createElement('a-box');
+        block.setAttribute('depth', 0.2);
+        block.setAttribute('height', blockSize);
+        block.setAttribute('width', blockSize);
+        block.setAttribute('color', '#4CC3D9');
+
+        // Başlangıç pozisyonu
+        block.object3D.position.set(0, 19, -2.9);
+        block.setAttribute('class', 'falling');
+        scene.appendChild(block);
+
+        return block;
+      }
+
+      let currentBlock = createBlock();
+
+      // Oyun döngüsü
+      function gameLoop() {
+        if (!currentBlock) return;
+
+        const pos = currentBlock.object3D.position;
+        const nextY = pos.y - 1;
+
+        if (nextY < 0 || grid[Math.floor(nextY)]?.[Math.floor(pos.x + 5)]) {
+          // Grid'e yerleştir
+          const y = Math.floor(pos.y);
+          const x = Math.floor(pos.x + 5);
+          if (y >= gridHeight || x < 0 || x >= gridWidth) {
+            alert("Oyun Bitti! Skor: " + score);
+            location.reload();
+            return;
+          }
+          grid[y][x] = currentBlock;
+          currentBlock.classList.remove('falling');
+
+          // Satır kontrolü
+          checkFullRows();
+
+          // Yeni blok oluştur
+          currentBlock = createBlock();
+        } else {
+          pos.y = nextY;
+        }
+
+        setTimeout(gameLoop, 500);
+      }
+
+      // Satır kontrolü
+      function checkFullRows() {
+        for (let y = 0; y < gridHeight; y++) {
+          if (grid[y].every(cell => cell !== null)) {
+            // Satırı sil
+            grid[y].forEach(cell => scene.removeChild(cell));
+            grid[y] = Array(gridWidth).fill(null);
+
+            // Yukarıdakileri aşağı indir
+            for (let ty = y + 1; ty < gridHeight; ty++) {
+              for (let x = 0; x < gridWidth; x++) {
+                const block = grid[ty][x];
+                if (block) {
+                  block.object3D.position.y -= 1;
+                  grid[ty - 1][x] = block;
+                  grid[ty][x] = null;
+                }
+              }
+            }
+
+            score += 100;
+            scoreText.setAttribute('text', 'value', Skor: ${score});
+          }
+        }
+      }
+
+      // Klavye ile blok hareket ettirme
+      document.addEventListener('keydown', (e) => {
+        if (!currentBlock) return;
+        const pos = currentBlock.object3D.position;
+
+        if (e.key === 'ArrowLeft' && pos.x > -4.5) pos.x -= 1;
+        if (e.key === 'ArrowRight' && pos.x < 4.5) pos.x += 1;
+        if (e.key === 'ArrowDown') pos.y -= 1;
+      });
+
+      // Başlat
+      gameLoop();
+    </script>
+  </body>
+</html>
